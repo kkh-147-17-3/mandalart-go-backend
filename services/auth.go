@@ -1,38 +1,48 @@
-package view
+package services
 
 import (
 	"encoding/json"
-	"html/template"
-	"mandart/utils"
+	"errors"
 	"net/http"
 	"net/url"
 	"os"
+	"strconv"
 	"strings"
+
+	"gorm.io/gorm"
+	"mandalart.com/schemas"
+	"mandalart.com/types"
+	"mandalart.com/utils"
 )
 
-type KAuthTokenReqBody struct {
-	GrantType    string `json:"grant_type"`
-	Code         string `json:"code"`
-	ClientId     string `json:"client_id"`
-	ClientSecret string `json:"client_secret"`
-	RedirectUri  string `json:"redirect_uri"`
+type UnauthorizedError struct {
+	error
 }
 
-func LoginPage(w http.ResponseWriter, r *http.Request) {
-	//requestUrl := fmt.Sprintf("")
-	//req, err := http.NewRequest(http.MethodPost, requestUrl, nil)
-
-	t, _ := template.ParseFiles("templates/index.html")
-	err := t.Execute(w, nil)
-	utils.Catch(err)
-}
-
-func KakaoLogin(w http.ResponseWriter, r *http.Request) {
-	code := r.URL.Query().Get("code")
-	if len(strings.TrimSpace(code)) == 0 {
-		w.WriteHeader(http.StatusBadRequest)
+func HandleSocialLogin(code string, provider types.SocialProvider) (*utils.Tokens, error) {
+	accessToken, err := getKakaoToken(code)
+	if err != nil {
+		return nil, UnauthorizedError{err}
 	}
 
+	userInfo, err := getKakaoUserInfo(accessToken)
+
+	if err != nil {
+		return nil, err
+	}
+	userId := strconv.Itoa(int(userInfo["id"].(float64)))
+	var user schemas.User
+	result := utils.DB.Where("social_provider = ? AND social_id = ?", types.KAKAO, userId).First(&user)
+	
+	if errors.Is(result.Error, gorm.ErrRecordNotFound) {
+		user.SocialID = userId
+		user.SocialProvider = types.KAKAO
+		utils.DB.Create(&user)
+	}
+	return utils.CreateToken(user.ID)
+}
+
+func getKakaoToken(code string) (string, error) {
 	var data map[string]interface{}
 
 	reqBody := url.Values{
@@ -46,27 +56,17 @@ func KakaoLogin(w http.ResponseWriter, r *http.Request) {
 	requestUrl := "https://kauth.kakao.com/oauth/token"
 	resp, err := http.Post(requestUrl, "application/x-www-form-urlencoded", strings.NewReader(reqBody.Encode()))
 	if err != nil {
-		w.WriteHeader(http.StatusBadRequest)
-		w.Write([]byte(err.Error()))
+		return "", err
 	}
 	defer resp.Body.Close()
 
 	err = json.NewDecoder(resp.Body).Decode(&data)
-	if err != nil {
-		w.WriteHeader(http.StatusBadRequest)
-		w.Write([]byte(err.Error()))
+	accessToken, ok := data["access_token"]
+	if !ok || err != nil {
+		return "", errors.New("failed to fetch access token")
 	}
 
-	userInfo, err := getKakaoUserInfo(data["access_token"].(string))
-
-	if err != nil {
-		w.WriteHeader(http.StatusBadRequest)
-		w.Write([]byte(err.Error()))
-	}
-
-	result, err := json.Marshal(userInfo)
-	w.Write(result)
-
+	return accessToken.(string), nil
 }
 
 func getKakaoUserInfo(token string) (map[string]interface{}, error) {
@@ -84,7 +84,7 @@ func getKakaoUserInfo(token string) (map[string]interface{}, error) {
 	}
 	defer resp.Body.Close()
 	var data map[string]interface{}
-	err = json.NewDecoder(resp.Body).Decode(&data)
+	json.NewDecoder(resp.Body).Decode(&data)
 
 	return data, nil
 }
