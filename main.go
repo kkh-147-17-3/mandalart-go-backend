@@ -8,7 +8,6 @@ import (
 	"github.com/go-chi/chi/v5"
 	"github.com/go-chi/chi/v5/middleware"
 	"github.com/joho/godotenv"
-	"mandalart.com/utils"
 	"mandalart.com/views"
 	"mandalart.com/views/test"
 )
@@ -20,7 +19,7 @@ func main() {
 	if err != nil {
 		log.Fatal("Error loading .env file")
 	}
-	utils.InitDatabase()
+	//utils.InitDatabase()
 
 	r.Use(middleware.Logger)
 	r.Get("/", views.LoginPage)
@@ -33,4 +32,3 @@ func main() {
 		return
 	}
 }
-
