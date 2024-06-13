@@ -2,7 +2,6 @@ package services
 
 import (
 	"context"
-	"github.com/jackc/pgx/v5/pgtype"
 	"log"
 	"mandalart.com/repositories"
 )
@@ -19,31 +18,34 @@ type SheetService struct {
 	Queries *repositories.Queries
 	Ctx     *context.Context
 }
+type Cell struct {
+	Id          int32  `json:"id"`
+	Color       string `json:"color"`
+	Goal        string `json:"goal"`
+	IsCompleted bool   `json:"isCompleted"`
+}
 
 type SheetWithMain struct {
-	Sheet repositories.Sheet  `json:"sheet"`
-	Cells []repositories.Cell `json:"cells"`
+	Id    int32  `json:"id"`
+	Name  string `json:"name"`
+	Cells []Cell `json:"cells"`
 }
 
 func (s *SheetService) GetSheetWithMainCellsById(ownerID int) (*SheetWithMain, error) {
-	var (
-		pOwnerID pgtype.Int4
-		pSheetID pgtype.Int4
-	)
-	pOwnerID.Int32 = int32(ownerID)
-	pOwnerID.Valid = true
-	sheet, err := s.Queries.GetLatestSheetByOwnerId(*s.Ctx, pOwnerID)
+
+	data, err := s.Queries.GetLatestSheetWithMainCellsByOwnerId(*s.Ctx, int32(ownerID))
 	if err != nil {
 		log.Println(err)
 		return nil, err
 	}
-	pSheetID.Int32 = int32(sheet.ID)
-	pSheetID.Valid = true
-	cells, err := s.Queries.GetMainCellsBySheetId(*s.Ctx, pSheetID)
-	if err != nil {
-		log.Println(err)
-		return nil, err
+	if len(data) == 0 {
+		return nil, nil
+	}
+	sheet := &SheetWithMain{Id: data[0].ID, Name: data[0].Name.String, Cells: []Cell{}}
+	for _, el := range data {
+		cell := Cell{el.CellID, el.Color.String, el.Goal.String, el.IsCompleted}
+		sheet.Cells = append(sheet.Cells, cell)
 	}
 
-	return &SheetWithMain{sheet, cells}, nil
+	return sheet, nil
 }

@@ -13,3 +13,8 @@ SELECT * FROM cells WHERE sheet_id = $1 AND step = 1;
 
 -- name: GetTodosByCellId :many
 SELECT * FROM todos WHERE cell_id = $1;
+
+-- name: GetLatestSheetWithMainCellsByOwnerId :many
+SELECT sheets.id, sheets.name, cells.id "cell_id", cells.color, cells.goal, cells.is_completed FROM sheets
+JOIN cells ON sheets.id = cells.sheet_id AND cells.step = 1
+WHERE sheets.id = $1;
