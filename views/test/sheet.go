@@ -4,8 +4,8 @@ import (
 	"context"
 	"github.com/go-chi/render"
 	"github.com/jackc/pgx/v5"
-	"github.com/jackc/pgx/v5/pgtype"
 	"mandalart.com/repositories"
+	"mandalart.com/services"
 	"net/http"
 )
 
@@ -20,10 +20,8 @@ func CreateSheet(w http.ResponseWriter, r *http.Request) {
 	defer conn.Close(ctx)
 
 	queries := repositories.New(conn)
-	var ownerId pgtype.Int4
-	ownerId.Int32 = int32(3)
-	ownerId.Valid = true
-	sheet, err := queries.GetLatestSheetByOwnerId(ctx, ownerId)
+	sheetService := services.SheetService{queries, &ctx}
+	sheet, err := sheetService.GetSheetWithMainCellsById(3)
 	if err != nil {
 		render.Status(r, http.StatusInternalServerError)
 		render.JSON(w, r, err)
