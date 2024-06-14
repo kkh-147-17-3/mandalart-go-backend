@@ -2,7 +2,10 @@ package services
 
 import (
 	"context"
+	"fmt"
 	"log"
+
+	"github.com/jackc/pgx/v5/pgxpool"
 	"mandalart.com/repositories"
 )
 
@@ -15,8 +18,8 @@ import (
 //}
 
 type SheetService struct {
-	Queries *repositories.Queries
-	Ctx     *context.Context
+	queries *repositories.Queries
+	ctx    *context.Context
 }
 type Cell struct {
 	Id          int32  `json:"id"`
@@ -31,9 +34,17 @@ type SheetWithMain struct {
 	Cells []Cell `json:"cells"`
 }
 
-func (s *SheetService) GetSheetWithMainCellsById(ownerID int) (*SheetWithMain, error) {
+func NewSheetService(ctx context.Context) (*SheetService, error) {
+	conn, ok := ctx.Value("db").(*pgxpool.Pool)
+	if !ok {
+		return nil, fmt.Errorf("database is not initialized")
+	}
+	return &SheetService{repositories.New(conn), &ctx}, nil
+}
 
-	data, err := s.Queries.GetLatestSheetWithMainCellsByOwnerId(*s.Ctx, int32(ownerID))
+func (s *SheetService) GetSheetWithMainCellsById(ownerID int) (*SheetWithMain, error) {
+	
+	data, err := s.queries.GetLatestSheetWithMainCellsByOwnerId(*s.ctx, int32(ownerID))
 	if err != nil {
 		log.Println(err)
 		return nil, err

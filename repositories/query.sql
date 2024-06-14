@@ -1,8 +1,5 @@
 -- name: GetUserBySocialProviderInfo :one
-SELECT *
-FROM users
-WHERE social_id = $1
-  AND social_provider = $2;
+SELECT * FROM users WHERE social_id = $1 AND social_provider = $2 LIMIT 1;
 
 
 -- name: GetLatestSheetByOwnerId :one
@@ -18,3 +15,8 @@ SELECT * FROM todos WHERE cell_id = $1;
 SELECT sheets.id, sheets.name, cells.id "cell_id", cells.color, cells.goal, cells.is_completed FROM sheets
 JOIN cells ON sheets.id = cells.sheet_id AND cells.step = 1
 WHERE sheets.id = $1;
+
+-- name: CreateUser :one
+INSERT INTO users(social_id, social_provider)
+VALUES($1,$2)
+RETURNING id;

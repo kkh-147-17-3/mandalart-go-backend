@@ -24,8 +24,13 @@ func KakaoLogin(w http.ResponseWriter, r *http.Request) {
 		render.PlainText(w, r, "")
 		return
 	}
-
-	token, err := services.HandleSocialLogin(code, types.KAKAO)
+	authService, err := services.NewAuthService(r.Context())
+	if err != nil {
+		render.Status(r,http.StatusUnauthorized)
+		render.PlainText(w, r, err.Error())
+		return
+	}
+	token, err := authService.HandleSocialLogin(code, types.KAKAO)
 	if err != nil {
 		render.Status(r,http.StatusUnauthorized)
 		render.PlainText(w, r, "")
@@ -33,8 +38,4 @@ func KakaoLogin(w http.ResponseWriter, r *http.Request) {
 	}
 	
 	render.JSON(w,r,token)
-}
-
-func GetSheetMainCells(w http.ResponseWriter, r *http.Request) {
-	render.JSON(w,r,services.GetMainBySheetID("123"))
 }

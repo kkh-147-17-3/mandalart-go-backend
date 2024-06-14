@@ -1,27 +1,21 @@
 package test
 
 import (
-	"context"
-	"github.com/go-chi/render"
-	"github.com/jackc/pgx/v5"
-	"mandalart.com/repositories"
-	"mandalart.com/services"
 	"net/http"
-	"os"
+
+	"github.com/go-chi/render"
+	s "mandalart.com/services"
 )
 
 func CreateSheet(w http.ResponseWriter, r *http.Request) {
-	ctx := context.Background()
-	conn, err := pgx.Connect(ctx, os.Getenv("DATABASE_URL"))
+	ctx := r.Context()
+	sheetService, err := s.NewSheetService(ctx)
 	if err != nil {
 		render.Status(r, http.StatusInternalServerError)
-		render.JSON(w, r, err.Error())
+		render.JSON(w, r, err)
 		return
 	}
-	defer conn.Close(ctx)
 
-	queries := repositories.New(conn)
-	sheetService := services.SheetService{queries, &ctx}
 	sheet, err := sheetService.GetSheetWithMainCellsById(49)
 	if err != nil {
 		render.Status(r, http.StatusInternalServerError)

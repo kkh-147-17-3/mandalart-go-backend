@@ -1,3 +1,4 @@
+//go:build exclude
 package services
 
 import (
@@ -8,7 +9,7 @@ import (
 func GetMainBySheetID(sheetID string) []schemas.Cell {
 	var cells []schemas.Cell
 
-	utils.DB.Where("sheetID = ?", sheetID).Find(&cells)
+	utils.DB.Where("sheet_id = ? AND depth = 1", sheetID).Find(&cells)
 
 	return cells
 } 

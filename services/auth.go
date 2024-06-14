@@ -1,16 +1,20 @@
 package services
 
 import (
+	"context"
+	"database/sql"
 	"encoding/json"
 	"errors"
+	"fmt"
 	"net/http"
 	"net/url"
 	"os"
 	"strconv"
 	"strings"
 
-	"gorm.io/gorm"
-	"mandalart.com/schemas"
+	"github.com/jackc/pgx/v5/pgtype"
+	"github.com/jackc/pgx/v5/pgxpool"
+	"mandalart.com/repositories"
 	"mandalart.com/types"
 	"mandalart.com/utils"
 )
@@ -19,7 +23,22 @@ type UnauthorizedError struct {
 	error
 }
 
-func HandleSocialLogin(code string, provider types.SocialProvider) (*utils.Tokens, error) {
+type AuthService struct {
+	queries *repositories.Queries
+	ctx    *context.Context
+}
+
+func NewAuthService(ctx context.Context) (*AuthService, error){
+	conn, ok := ctx.Value("db").(*pgxpool.Pool)
+	if !ok {
+		return nil, fmt.Errorf("database is not initialized")
+	}
+	return &AuthService{repositories.New(conn), &ctx}, nil
+}
+
+func (s *AuthService) HandleSocialLogin(code string, provider types.SocialProvider) (*utils.Tokens, error) {
+	var user repositories.User
+	
 	accessToken, err := getKakaoToken(code)
 	if err != nil {
 		return nil, UnauthorizedError{err}
@@ -31,15 +50,21 @@ func HandleSocialLogin(code string, provider types.SocialProvider) (*utils.Token
 		return nil, err
 	}
 	userId := strconv.Itoa(int(userInfo["id"].(float64)))
-	var user schemas.User
-	result := utils.DB.Where("social_provider = ? AND social_id = ?", types.KAKAO, userId).First(&user)
-	
-	if errors.Is(result.Error, gorm.ErrRecordNotFound) {
-		user.SocialID = userId
-		user.SocialProvider = types.KAKAO
-		utils.DB.Create(&user)
+
+	args := repositories.GetUserBySocialProviderInfoParams{
+		SocialID: pgtype.Text{String: userId, Valid: true},
+		SocialProvider: pgtype.Text{String: "KAKAO", Valid: true},
 	}
-	return utils.CreateToken(user.ID)
+	user, err = s.queries.GetUserBySocialProviderInfo(*s.ctx, args)
+	
+	if errors.Is(err, sql.ErrNoRows) {
+		userID, err := s.queries.CreateUser(*s.ctx, repositories.CreateUserParams(args))
+		if err != nil {
+			return nil, err
+		}
+		return utils.CreateToken(int(userID))
+	}
+	return utils.CreateToken(int(user.ID))
 }
 
 func getKakaoToken(code string) (string, error) {

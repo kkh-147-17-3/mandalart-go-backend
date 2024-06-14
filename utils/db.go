@@ -1,21 +1,18 @@
 package utils
 
 import (
-	"fmt"
+	"context"
+	"log"
 
-	"gorm.io/driver/postgres"
-	"gorm.io/gorm"
-	"mandalart.com/schemas"
+	"github.com/jackc/pgx/v5/pgxpool"
 )
 
-var DB *gorm.DB
+var DBPool *pgxpool.Pool
 
-func InitDatabase() {
-	fmt.Println("start go connect databse")
+func InitDatabase(connString string) {
 	var err error
-	DB, err = gorm.Open(postgres.Open("user=eggtart password=tkfkdgo486! host=43.203.193.216 port=5432 dbname=eggtart_db_1"))
+	DBPool, err = pgxpool.New(context.Background(), connString)
 	if err != nil {
-		panic("failed to connect database")
+		log.Fatalf("Unable to connect to database: %v\n", err)
 	}
-	DB.AutoMigrate(schemas.User{}, schemas.Sheet{}, schemas.Cell{}, schemas.Todo{})
 }
