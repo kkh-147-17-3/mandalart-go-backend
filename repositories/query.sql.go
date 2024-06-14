@@ -7,8 +7,6 @@ package repositories
 
 import (
 	"context"
-
-	"github.com/jackc/pgx/v5/pgtype"
 )
 
 const createUser = `-- name: CreateUser :one
@@ -18,8 +16,8 @@ RETURNING id
 `
 
 type CreateUserParams struct {
-	SocialID       pgtype.Text `json:"socialId"`
-	SocialProvider pgtype.Text `json:"socialProvider"`
+	SocialID       *string `json:"socialId"`
+	SocialProvider *string `json:"socialProvider"`
 }
 
 func (q *Queries) CreateUser(ctx context.Context, arg CreateUserParams) (int32, error) {
@@ -33,7 +31,7 @@ const getLatestSheetByOwnerId = `-- name: GetLatestSheetByOwnerId :one
 SELECT id, owner_id, name, created_at, modified_at FROM sheets WHERE owner_id = $1 ORDER BY id DESC LIMIT 1
 `
 
-func (q *Queries) GetLatestSheetByOwnerId(ctx context.Context, ownerID pgtype.Int4) (Sheet, error) {
+func (q *Queries) GetLatestSheetByOwnerId(ctx context.Context, ownerID *int32) (Sheet, error) {
 	row := q.db.QueryRow(ctx, getLatestSheetByOwnerId, ownerID)
 	var i Sheet
 	err := row.Scan(
@@ -48,21 +46,23 @@ func (q *Queries) GetLatestSheetByOwnerId(ctx context.Context, ownerID pgtype.In
 
 const getLatestSheetWithMainCellsByOwnerId = `-- name: GetLatestSheetWithMainCellsByOwnerId :many
 SELECT sheets.id, sheets.name, cells.id "cell_id", cells.color, cells.goal, cells.is_completed FROM sheets
-JOIN cells ON sheets.id = cells.sheet_id AND cells.step = 1
-WHERE sheets.id = $1
+JOIN cells ON sheets.id = cells.sheet_id AND cells.step = 2
+WHERE sheets.id = (
+    SELECT id FROM sheets WHERE sheets.owner_id = $1 ORDER BY id DESC LIMIT 1
+)
 `
 
 type GetLatestSheetWithMainCellsByOwnerIdRow struct {
-	ID          int32       `json:"id"`
-	Name        pgtype.Text `json:"name"`
-	CellID      int32       `json:"cellId"`
-	Color       pgtype.Text `json:"color"`
-	Goal        pgtype.Text `json:"goal"`
-	IsCompleted bool        `json:"isCompleted"`
+	ID          int32   `json:"id"`
+	Name        *string `json:"name"`
+	CellID      int32   `json:"cellId"`
+	Color       *string `json:"color"`
+	Goal        *string `json:"goal"`
+	IsCompleted bool    `json:"isCompleted"`
 }
 
-func (q *Queries) GetLatestSheetWithMainCellsByOwnerId(ctx context.Context, id int32) ([]GetLatestSheetWithMainCellsByOwnerIdRow, error) {
-	rows, err := q.db.Query(ctx, getLatestSheetWithMainCellsByOwnerId, id)
+func (q *Queries) GetLatestSheetWithMainCellsByOwnerId(ctx context.Context, ownerID *int32) ([]GetLatestSheetWithMainCellsByOwnerIdRow, error) {
+	rows, err := q.db.Query(ctx, getLatestSheetWithMainCellsByOwnerId, ownerID)
 	if err != nil {
 		return nil, err
 	}
@@ -92,7 +92,7 @@ const getMainCellsBySheetId = `-- name: GetMainCellsBySheetId :many
 SELECT id, sheet_id, goal, color, step, "order", parent_id, is_completed, created_at, modified_at, owner_id FROM cells WHERE sheet_id = $1 AND step = 1
 `
 
-func (q *Queries) GetMainCellsBySheetId(ctx context.Context, sheetID pgtype.Int4) ([]Cell, error) {
+func (q *Queries) GetMainCellsBySheetId(ctx context.Context, sheetID *int32) ([]Cell, error) {
 	rows, err := q.db.Query(ctx, getMainCellsBySheetId, sheetID)
 	if err != nil {
 		return nil, err
@@ -128,7 +128,7 @@ const getTodosByCellId = `-- name: GetTodosByCellId :many
 SELECT id, owner_id, cell_id, content, created_at, modified_at FROM todos WHERE cell_id = $1
 `
 
-func (q *Queries) GetTodosByCellId(ctx context.Context, cellID pgtype.Int4) ([]Todo, error) {
+func (q *Queries) GetTodosByCellId(ctx context.Context, cellID *int32) ([]Todo, error) {
 	rows, err := q.db.Query(ctx, getTodosByCellId, cellID)
 	if err != nil {
 		return nil, err
@@ -160,8 +160,8 @@ SELECT id, social_id, social_provider FROM users WHERE social_id = $1 AND social
 `
 
 type GetUserBySocialProviderInfoParams struct {
-	SocialID       pgtype.Text `json:"socialId"`
-	SocialProvider pgtype.Text `json:"socialProvider"`
+	SocialID       *string `json:"socialId"`
+	SocialProvider *string `json:"socialProvider"`
 }
 
 func (q *Queries) GetUserBySocialProviderInfo(ctx context.Context, arg GetUserBySocialProviderInfoParams) (User, error) {

@@ -5,43 +5,42 @@
 package repositories
 
 import (
-	"github.com/jackc/pgx/v5/pgtype"
 	"mandalart.com/types"
 )
 
 type Cell struct {
 	ID          int32           `json:"id"`
-	SheetID     pgtype.Int4     `json:"sheetId"`
-	Goal        pgtype.Text     `json:"goal"`
-	Color       pgtype.Text     `json:"color"`
+	SheetID     *int32          `json:"sheetId"`
+	Goal        *string         `json:"goal"`
+	Color       *string         `json:"color"`
 	Step        int32           `json:"step"`
 	Order       int32           `json:"order"`
-	ParentID    pgtype.Int4     `json:"parentId"`
+	ParentID    *int32          `json:"parentId"`
 	IsCompleted bool            `json:"isCompleted"`
 	CreatedAt   types.Timestamp `json:"createdAt"`
 	ModifiedAt  types.Timestamp `json:"modifiedAt"`
-	OwnerID     pgtype.Int4     `json:"ownerId"`
+	OwnerID     *int32          `json:"ownerId"`
 }
 
 type Sheet struct {
 	ID         int32           `json:"id"`
-	OwnerID    pgtype.Int4     `json:"ownerId"`
-	Name       pgtype.Text     `json:"name"`
+	OwnerID    *int32          `json:"ownerId"`
+	Name       *string         `json:"name"`
 	CreatedAt  types.Timestamp `json:"createdAt"`
 	ModifiedAt types.Timestamp `json:"modifiedAt"`
 }
 
 type Todo struct {
 	ID         int32           `json:"id"`
-	OwnerID    pgtype.Int4     `json:"ownerId"`
-	CellID     pgtype.Int4     `json:"cellId"`
-	Content    pgtype.Text     `json:"content"`
+	OwnerID    *int32          `json:"ownerId"`
+	CellID     *int32          `json:"cellId"`
+	Content    *string         `json:"content"`
 	CreatedAt  types.Timestamp `json:"createdAt"`
 	ModifiedAt types.Timestamp `json:"modifiedAt"`
 }
 
 type User struct {
-	ID             int32       `json:"id"`
-	SocialID       pgtype.Text `json:"socialId"`
-	SocialProvider pgtype.Text `json:"socialProvider"`
+	ID             int32   `json:"id"`
+	SocialID       *string `json:"socialId"`
+	SocialProvider *string `json:"socialProvider"`
 }

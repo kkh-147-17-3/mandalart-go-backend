@@ -69,14 +69,21 @@ func verifyToken(tokenString string) (*jwt.Token, error) {
 	return token, nil
 }
 
-func GetUserIdFromToken(tokenString string) (string, error) {
+func GetUserIdFromToken(tokenString string) (int, error) {
 	token, err := verifyToken(tokenString)
 	if err != nil {
-		return "", err
+		return 0, err
 	}
 	sub, err := token.Claims.GetSubject()
 	if err != nil {
-		return "", err
+		return 0, err
 	}
-	return sub, nil
+
+	userID,err := strconv.Atoi(sub)
+
+	if err != nil {
+		return 0, err
+	}
+
+	return userID, nil
 }

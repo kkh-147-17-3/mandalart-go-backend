@@ -9,22 +9,14 @@ import (
 	"mandalart.com/repositories"
 )
 
-//func CreateSheetByOwnerId(sheetID string) []schemas.Cell {
-//
-//	db := repo.New()
-//	db.GetLatestSheetByOwnerId()
-//
-//	return cells
-//}
-
 type SheetService struct {
 	queries *repositories.Queries
-	ctx    *context.Context
 }
+
 type Cell struct {
 	Id          int32  `json:"id"`
-	Color       string `json:"color"`
-	Goal        string `json:"goal"`
+	Color       *string `json:"color"`
+	Goal        *string `json:"goal"`
 	IsCompleted bool   `json:"isCompleted"`
 }
 
@@ -39,24 +31,34 @@ func NewSheetService(ctx context.Context) (*SheetService, error) {
 	if !ok {
 		return nil, fmt.Errorf("database is not initialized")
 	}
-	return &SheetService{repositories.New(conn), &ctx}, nil
+	return &SheetService{repositories.New(conn)}, nil
 }
 
-func (s *SheetService) GetSheetWithMainCellsById(ownerID int) (*SheetWithMain, error) {
+func (s *SheetService) GetSheetWithMainCellsById(ctx context.Context,ownerID int32) (*SheetWithMain, error) {
 	
-	data, err := s.queries.GetLatestSheetWithMainCellsByOwnerId(*s.ctx, int32(ownerID))
+	data, err := s.queries.GetLatestSheetWithMainCellsByOwnerId(ctx, &ownerID)
 	if err != nil {
-		log.Println(err)
+		log.Println("Error fetching sheet data:", err)
 		return nil, err
 	}
 	if len(data) == 0 {
 		return nil, nil
 	}
-	sheet := &SheetWithMain{Id: data[0].ID, Name: data[0].Name.String, Cells: []Cell{}}
-	for _, el := range data {
-		cell := Cell{el.CellID, el.Color.String, el.Goal.String, el.IsCompleted}
-		sheet.Cells = append(sheet.Cells, cell)
+	sheet := &SheetWithMain{
+		Id:    data[0].ID,
+		Name:  *data[0].Name,
+		Cells: make([]Cell, len(data)),
 	}
+
+	for i, el := range data {
+		sheet.Cells[i] = Cell{
+			Id:          el.CellID,
+			Color:       el.Color,
+			Goal:        el.Goal,
+			IsCompleted: el.IsCompleted,
+		}
+	}
+
 
 	return sheet, nil
 }

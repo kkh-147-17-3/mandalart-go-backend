@@ -13,8 +13,10 @@ SELECT * FROM todos WHERE cell_id = $1;
 
 -- name: GetLatestSheetWithMainCellsByOwnerId :many
 SELECT sheets.id, sheets.name, cells.id "cell_id", cells.color, cells.goal, cells.is_completed FROM sheets
-JOIN cells ON sheets.id = cells.sheet_id AND cells.step = 1
-WHERE sheets.id = $1;
+JOIN cells ON sheets.id = cells.sheet_id AND cells.step = 2
+WHERE sheets.id = (
+    SELECT id FROM sheets WHERE sheets.owner_id = $1 ORDER BY id DESC LIMIT 1
+);
 
 -- name: CreateUser :one
 INSERT INTO users(social_id, social_provider)

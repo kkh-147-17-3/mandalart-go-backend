@@ -12,7 +12,6 @@ import (
 	"strconv"
 	"strings"
 
-	"github.com/jackc/pgx/v5/pgtype"
 	"github.com/jackc/pgx/v5/pgxpool"
 	"mandalart.com/repositories"
 	"mandalart.com/types"
@@ -50,10 +49,11 @@ func (s *AuthService) HandleSocialLogin(code string, provider types.SocialProvid
 		return nil, err
 	}
 	userId := strconv.Itoa(int(userInfo["id"].(float64)))
-
+	
+	sp := "KAKAO"
 	args := repositories.GetUserBySocialProviderInfoParams{
-		SocialID: pgtype.Text{String: userId, Valid: true},
-		SocialProvider: pgtype.Text{String: "KAKAO", Valid: true},
+		SocialID: &userId,
+		SocialProvider: &sp,
 	}
 	user, err = s.queries.GetUserBySocialProviderInfo(*s.ctx, args)
 	

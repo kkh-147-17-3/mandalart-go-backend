@@ -14,7 +14,6 @@ import (
 	"github.com/joho/godotenv"
 	"mandalart.com/utils"
 	"mandalart.com/views"
-	"mandalart.com/views/test"
 )
 
 func main() {
@@ -32,7 +31,7 @@ func main() {
 		r.Use(middleware.Logger)
 		r.Use(DbCtx)
 		r.Use(AuthCtx)
-		r.Get("/sheet", test.CreateSheet)
+		r.Get("/sheet", views.GetLatestSheetWithMainCells)
 	})
 
 	err = http.ListenAndServe(":3001", r)
@@ -57,7 +56,7 @@ func AuthCtx(next http.Handler) http.Handler {
 	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request){
 		var (
 			err error
-			userID string
+			userID int
 		)
 		strs := strings.Split(strings.TrimSpace(r.Header.Get("Authorization")), "Bearer")
 		if(len(strs) < 2){
@@ -73,7 +72,7 @@ func AuthCtx(next http.Handler) http.Handler {
 			return 
 		}
 
-		ctx := context.WithValue(r.Context(), ContextKey("userID"), userID)
+		ctx := context.WithValue(r.Context(), "userID", userID)
 		next.ServeHTTP(w, r.WithContext(ctx))
 	})
 }
