@@ -30,7 +30,7 @@ func KakaoLogin(w http.ResponseWriter, r *http.Request) {
 		render.PlainText(w, r, err.Error())
 		return
 	}
-	token, err := authService.HandleSocialLogin(code, types.KAKAO)
+	token, err := authService.HandleSocialLogin(r.Context(), code, types.KAKAO)
 	if err != nil {
 		render.Status(r,http.StatusUnauthorized)
 		render.PlainText(w, r, "")

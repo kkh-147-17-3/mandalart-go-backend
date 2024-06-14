@@ -5,14 +5,12 @@ import (
 	"database/sql"
 	"encoding/json"
 	"errors"
-	"fmt"
 	"net/http"
 	"net/url"
 	"os"
 	"strconv"
 	"strings"
 
-	"github.com/jackc/pgx/v5/pgxpool"
 	"mandalart.com/repositories"
 	"mandalart.com/types"
 	"mandalart.com/utils"
@@ -23,19 +21,18 @@ type UnauthorizedError struct {
 }
 
 type AuthService struct {
-	queries *repositories.Queries
-	ctx    *context.Context
+	*BaseService
 }
 
 func NewAuthService(ctx context.Context) (*AuthService, error){
-	conn, ok := ctx.Value("db").(*pgxpool.Pool)
-	if !ok {
-		return nil, fmt.Errorf("database is not initialized")
+	baseService, err := NewBaseService(ctx)
+	if err != nil {
+		return nil, err
 	}
-	return &AuthService{repositories.New(conn), &ctx}, nil
+	return &AuthService{BaseService: baseService}, nil
 }
 
-func (s *AuthService) HandleSocialLogin(code string, provider types.SocialProvider) (*utils.Tokens, error) {
+func (s *AuthService) HandleSocialLogin(ctx context.Context, code string, provider types.SocialProvider) (*utils.Tokens, error) {
 	var user repositories.User
 	
 	accessToken, err := getKakaoToken(code)
@@ -55,10 +52,10 @@ func (s *AuthService) HandleSocialLogin(code string, provider types.SocialProvid
 		SocialID: &userId,
 		SocialProvider: &sp,
 	}
-	user, err = s.queries.GetUserBySocialProviderInfo(*s.ctx, args)
+	user, err = s.Queries.GetUserBySocialProviderInfo(ctx, args)
 	
 	if errors.Is(err, sql.ErrNoRows) {
-		userID, err := s.queries.CreateUser(*s.ctx, repositories.CreateUserParams(args))
+		userID, err := s.Queries.CreateUser(ctx, repositories.CreateUserParams(args))
 		if err != nil {
 			return nil, err
 		}

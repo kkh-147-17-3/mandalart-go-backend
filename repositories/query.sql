@@ -22,3 +22,9 @@ WHERE sheets.id = (
 INSERT INTO users(social_id, social_provider)
 VALUES($1,$2)
 RETURNING id;
+
+-- name: GetChildrenCellsByParentId :many
+SELECT * FROM cells WHERE parent_id = $1 ORDER BY step;
+
+-- name: GetCellById :one
+SELECT * FROM cells WHERE id = $1;

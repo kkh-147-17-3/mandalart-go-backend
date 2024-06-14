@@ -27,6 +27,65 @@ func (q *Queries) CreateUser(ctx context.Context, arg CreateUserParams) (int32, 
 	return id, err
 }
 
+const getCellById = `-- name: GetCellById :one
+SELECT id, sheet_id, goal, color, step, "order", parent_id, is_completed, created_at, modified_at, owner_id FROM cells WHERE id = $1
+`
+
+func (q *Queries) GetCellById(ctx context.Context, id int32) (Cell, error) {
+	row := q.db.QueryRow(ctx, getCellById, id)
+	var i Cell
+	err := row.Scan(
+		&i.ID,
+		&i.SheetID,
+		&i.Goal,
+		&i.Color,
+		&i.Step,
+		&i.Order,
+		&i.ParentID,
+		&i.IsCompleted,
+		&i.CreatedAt,
+		&i.ModifiedAt,
+		&i.OwnerID,
+	)
+	return i, err
+}
+
+const getChildrenCellsByParentId = `-- name: GetChildrenCellsByParentId :many
+SELECT id, sheet_id, goal, color, step, "order", parent_id, is_completed, created_at, modified_at, owner_id FROM cells WHERE parent_id = $1 ORDER BY step
+`
+
+func (q *Queries) GetChildrenCellsByParentId(ctx context.Context, parentID *int32) ([]Cell, error) {
+	rows, err := q.db.Query(ctx, getChildrenCellsByParentId, parentID)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+	var items []Cell
+	for rows.Next() {
+		var i Cell
+		if err := rows.Scan(
+			&i.ID,
+			&i.SheetID,
+			&i.Goal,
+			&i.Color,
+			&i.Step,
+			&i.Order,
+			&i.ParentID,
+			&i.IsCompleted,
+			&i.CreatedAt,
+			&i.ModifiedAt,
+			&i.OwnerID,
+		); err != nil {
+			return nil, err
+		}
+		items = append(items, i)
+	}
+	if err := rows.Err(); err != nil {
+		return nil, err
+	}
+	return items, nil
+}
+
 const getLatestSheetByOwnerId = `-- name: GetLatestSheetByOwnerId :one
 SELECT id, owner_id, name, created_at, modified_at FROM sheets WHERE owner_id = $1 ORDER BY id DESC LIMIT 1
 `

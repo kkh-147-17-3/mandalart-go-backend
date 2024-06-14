@@ -32,6 +32,7 @@ func main() {
 		r.Use(DbCtx)
 		r.Use(AuthCtx)
 		r.Get("/sheet", views.GetLatestSheetWithMainCells)
+		r.Get("/cell/{cellID}/children", views.GetChildrenCells)
 	})
 
 	err = http.ListenAndServe(":3001", r)

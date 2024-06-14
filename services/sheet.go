@@ -2,15 +2,11 @@ package services
 
 import (
 	"context"
-	"fmt"
 	"log"
-
-	"github.com/jackc/pgx/v5/pgxpool"
-	"mandalart.com/repositories"
 )
 
 type SheetService struct {
-	queries *repositories.Queries
+	*BaseService
 }
 
 type Cell struct {
@@ -27,16 +23,16 @@ type SheetWithMain struct {
 }
 
 func NewSheetService(ctx context.Context) (*SheetService, error) {
-	conn, ok := ctx.Value("db").(*pgxpool.Pool)
-	if !ok {
-		return nil, fmt.Errorf("database is not initialized")
+	base, err := NewBaseService(ctx)
+	if err != nil {
+		return nil, err
 	}
-	return &SheetService{repositories.New(conn)}, nil
+	return &SheetService{base}, nil
 }
 
 func (s *SheetService) GetSheetWithMainCellsById(ctx context.Context,ownerID int32) (*SheetWithMain, error) {
 	
-	data, err := s.queries.GetLatestSheetWithMainCellsByOwnerId(ctx, &ownerID)
+	data, err := s.Queries.GetLatestSheetWithMainCellsByOwnerId(ctx, &ownerID)
 	if err != nil {
 		log.Println("Error fetching sheet data:", err)
 		return nil, err
