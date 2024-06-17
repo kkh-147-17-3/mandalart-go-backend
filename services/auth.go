@@ -12,7 +12,6 @@ import (
 	"strings"
 
 	"mandalart.com/repositories"
-	"mandalart.com/types"
 	"mandalart.com/utils"
 )
 
@@ -21,20 +20,16 @@ type UnauthorizedError struct {
 }
 
 type AuthService struct {
-	*BaseService
+	q *repositories.Queries
 }
 
-func NewAuthService(ctx context.Context) (*AuthService, error){
-	baseService, err := NewBaseService(ctx)
-	if err != nil {
-		return nil, err
-	}
-	return &AuthService{BaseService: baseService}, nil
+func NewAuthService(q *repositories.Queries) *AuthService {
+	return &AuthService{q}
 }
 
-func (s *AuthService) HandleSocialLogin(ctx context.Context, code string, provider types.SocialProvider) (*utils.Tokens, error) {
+func (s *AuthService) HandleSocialLogin(ctx context.Context, code string) (*utils.Tokens, error) {
 	var user repositories.User
-	
+
 	accessToken, err := getKakaoToken(code)
 	if err != nil {
 		return nil, UnauthorizedError{err}
@@ -46,16 +41,16 @@ func (s *AuthService) HandleSocialLogin(ctx context.Context, code string, provid
 		return nil, err
 	}
 	userId := strconv.Itoa(int(userInfo["id"].(float64)))
-	
+
 	sp := "KAKAO"
 	args := repositories.GetUserBySocialProviderInfoParams{
-		SocialID: &userId,
+		SocialID:       &userId,
 		SocialProvider: &sp,
 	}
-	user, err = s.Queries.GetUserBySocialProviderInfo(ctx, args)
-	
+	user, err = s.q.GetUserBySocialProviderInfo(ctx, args)
+
 	if errors.Is(err, sql.ErrNoRows) {
-		userID, err := s.Queries.CreateUser(ctx, repositories.CreateUserParams(args))
+		userID, err := s.q.CreateUser(ctx, repositories.CreateUserParams(args))
 		if err != nil {
 			return nil, err
 		}

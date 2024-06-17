@@ -9,7 +9,16 @@ import (
 	s "mandalart.com/services"
 )
 
-func GetLatestSheetWithMainCells(w http.ResponseWriter, r *http.Request) {
+type SheetView struct {
+	sheetService *s.SheetService
+	cellService  *s.CellService
+}
+
+func NewSheetView(sheetService *s.SheetService, cellService *s.CellService) *SheetView {
+	return &SheetView{sheetService, cellService}
+}
+
+func (v *SheetView) GetLatestSheetWithMainCells(w http.ResponseWriter, r *http.Request) {
 	ctx := r.Context()
 	userID, ok := ctx.Value("userID").(int)
 	if !ok {
@@ -17,13 +26,7 @@ func GetLatestSheetWithMainCells(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	sheetService, err := s.NewSheetService(ctx)
-	if err != nil {
-		respond(w, r, http.StatusInternalServerError, err.Error())
-		return
-	}
-
-	sheet, err := sheetService.GetSheetWithMainCellsById(ctx, int32(userID))
+	sheet, err := v.sheetService.GetSheetWithMainCellsById(ctx, int32(userID))
 	if err != nil {
 		respond(w, r, http.StatusInternalServerError, err.Error())
 		return
@@ -32,7 +35,7 @@ func GetLatestSheetWithMainCells(w http.ResponseWriter, r *http.Request) {
 	respond(w, r, http.StatusOK, sheet)
 }
 
-func GetChildrenCells(w http.ResponseWriter, r *http.Request) {
+func (v *SheetView) GetChildrenCells(w http.ResponseWriter, r *http.Request) {
 	ctx := r.Context()
 	userID, ok := ctx.Value("userID").(int)
 
@@ -40,25 +43,32 @@ func GetChildrenCells(w http.ResponseWriter, r *http.Request) {
 		respond(w, r, http.StatusInternalServerError, fmt.Errorf("user id not found"))
 		return
 	}
-	
+
 	cellID, err := strconv.Atoi(chi.URLParam(r, "cellID"))
 	if err != nil {
 		respond(w, r, http.StatusBadRequest, err.Error())
 		return
 	}
 
-
-	cellService, err := s.NewCellService(ctx)
-	if err != nil {
-		respond(w, r, http.StatusInternalServerError, err.Error())
-		return
-	}
-
-	cells, err := cellService.GetChildrenCellsByParentID(ctx, int32(userID), int32(cellID))
+	cells, err := v.cellService.GetChildrenCellsByParentID(ctx, int32(userID), int32(cellID))
 	if err != nil {
 		respond(w, r, http.StatusInternalServerError, err.Error())
 		return
 	}
 
 	respond(w, r, http.StatusOK, cells)
+}
+
+func (v *SheetView) CreateSheet(w http.ResponseWriter, r *http.Request) {
+	ctx := r.Context()
+	userID, ok := ctx.Value("userID").(int)
+	if !ok {
+		respond(w, r, http.StatusUnauthorized, fmt.Errorf("user id not found"))
+	}
+
+	sheet, err := v.sheetService.CreateNewSheet(ctx, int32(userID))
+	if err != nil {
+		respond(w, r, http.StatusInternalServerError, err.Error())
+	}
+	respond(w, r, http.StatusOK, sheet)
 }

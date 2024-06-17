@@ -3,24 +3,26 @@ package services
 import (
 	"context"
 	"fmt"
+	repo "mandalart.com/repositories"
+	"mandalart.com/utils"
 )
 
+type CellWithTodos struct {
+	repo.Cell
+	Todos []repo.Todo
+}
+
 type CellService struct {
-	*BaseService
+	q *repo.Queries
 }
 
-func NewCellService(ctx context.Context) (*CellService, error){
-	base,err := NewBaseService(ctx)
-	if err != nil {
-		return nil, err
-	}
-	return &CellService{base}, nil
+func NewCellService(q *repo.Queries) *CellService {
+	return &CellService{q}
 }
-
 
 func (c *CellService) GetChildrenCellsByParentID(ctx context.Context, userID int32, parentID int32) ([]Cell, error) {
 
-	parentCell, err := c.Queries.GetCellById(ctx, parentID)
+	parentCell, err := c.q.GetCellById(ctx, parentID)
 	if err != nil {
 		return nil, err
 	}
@@ -29,7 +31,7 @@ func (c *CellService) GetChildrenCellsByParentID(ctx context.Context, userID int
 		return nil, fmt.Errorf("not authorized")
 	}
 
-	children, err := c.Queries.GetChildrenCellsByParentId(ctx, &parentID)
+	children, err := c.q.GetChildrenCellsByParentId(ctx, &parentID)
 	if err != nil {
 		return nil, err
 	}
@@ -38,7 +40,7 @@ func (c *CellService) GetChildrenCellsByParentID(ctx context.Context, userID int
 
 	for i, child := range children {
 		cells[i] = Cell{
-			Id:          child.ID,
+			ID:          child.ID,
 			Color:       child.Color,
 			Goal:        child.Goal,
 			IsCompleted: child.IsCompleted,
@@ -46,4 +48,18 @@ func (c *CellService) GetChildrenCellsByParentID(ctx context.Context, userID int
 	}
 
 	return cells, nil
+}
+
+func (c *CellService) GetCellWithTodosByID(ctx context.Context, cellID int32) (*CellWithTodos, error) {
+	q := repo.New(utils.DBPool)
+	result, err := q.GetCellById(ctx, cellID)
+	if err != nil {
+		return nil, err
+	}
+
+	todos, err := q.GetTodosByCellID(ctx, &result.ID)
+	if err != nil {
+		return nil, err
+	}
+	return &CellWithTodos{Cell: result, Todos: todos}, nil
 }

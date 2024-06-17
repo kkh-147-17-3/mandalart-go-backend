@@ -4,6 +4,8 @@ import (
 	"context"
 	"fmt"
 	"log"
+	repo "mandalart.com/repositories"
+	"mandalart.com/services"
 	"net/http"
 	"os"
 	"strings"
@@ -25,14 +27,21 @@ func main() {
 	}
 	utils.InitDatabase(os.Getenv("DATABASE_URL"))
 
-	r.Get("/", views.LoginPage)
-	r.With(DbCtx).Get("/oauth/kakao", views.KakaoLogin)
-	r.Route("/", func(r chi.Router){
+	queries := repo.New(utils.DBPool)
+	sheetService := services.NewSheetService(queries)
+	cellService := services.NewCellService(queries)
+	authService := services.NewAuthService(queries)
+	sheetView := views.NewSheetView(sheetService, cellService)
+	authView := views.NewAuthView(authService)
+
+	r.Get("/", authView.LoginPage)
+	r.Get("/oauth/kakao", authView.KakaoLogin)
+	r.Route("/", func(r chi.Router) {
 		r.Use(middleware.Logger)
-		r.Use(DbCtx)
 		r.Use(AuthCtx)
-		r.Get("/sheet", views.GetLatestSheetWithMainCells)
-		r.Get("/cell/{cellID}/children", views.GetChildrenCells)
+		r.Get("/sheet", sheetView.GetLatestSheetWithMainCells)
+		r.Get("/cell/{cellID}/children", sheetView.GetChildrenCells)
+		r.Post("/sheet", sheetView.CreateSheet)
 	})
 
 	err = http.ListenAndServe(":3001", r)
@@ -43,34 +52,24 @@ func main() {
 	defer utils.DBPool.Close()
 }
 
-type ContextKey string
-
-func DbCtx(next http.Handler) http.Handler {
-	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-		conn := utils.DBPool
-		ctx := context.WithValue(r.Context(), "db", conn)
-		next.ServeHTTP(w, r.WithContext(ctx))
-	})
-}
-
 func AuthCtx(next http.Handler) http.Handler {
-	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request){
+	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		var (
-			err error
+			err    error
 			userID int
 		)
 		strs := strings.Split(strings.TrimSpace(r.Header.Get("Authorization")), "Bearer")
-		if(len(strs) < 2){
+		if len(strs) < 2 {
 			err = fmt.Errorf("bearer token is required")
 		} else {
 			tokenStr := strings.TrimSpace(strs[1])
 			userID, err = utils.GetUserIdFromToken(tokenStr)
 		}
-	
+
 		if err != nil {
 			render.Status(r, http.StatusUnauthorized)
 			render.JSON(w, r, err.Error())
-			return 
+			return
 		}
 
 		ctx := context.WithValue(r.Context(), "userID", userID)
