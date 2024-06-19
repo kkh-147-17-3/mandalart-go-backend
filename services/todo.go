@@ -7,29 +7,36 @@ import (
 )
 
 type InsertTodosInput struct {
-	OwnerID *int32  `json:"ownerId"`
-	CellID  *int32  `json:"cellId"`
+	OwnerID *int  `json:"ownerId"`
+	CellID  *int  `json:"cellId"`
 	Content *string `json:"content"`
 }
 
 type TodoService struct {
 	q *repo.Queries
+	cellService *CellService
 }
 
-func NewTodoService() *TodoService {
-	q := repo.New(utils.DBPool)
-	return &TodoService{q}
+func NewTodoService(q *repo.Queries, c *CellService) *TodoService {
+	return &TodoService{q, c}
 }
 
-func (s *TodoService) InsertTodos(ctx context.Context, userID int32, cellID int32, todos []InsertTodosInput) (*CellWithTodos, error) {
+func (s *TodoService) InsertTodos(ctx context.Context, userID int, cellID int, todos []InsertTodosInput) (*CellWithTodos, error) {
 	q := repo.New(utils.DBPool)
 	var args []repo.InsertTodosByCellIDParams
 	for _, todo := range todos {
-		args = append(args, repo.InsertTodosByCellIDParams{OwnerID: todo.OwnerID, CellID: todo.CellID, Content: todo.Content})
+		args = append(args, repo.InsertTodosByCellIDParams{OwnerID: *todo.OwnerID, CellID: *todo.CellID, Content: todo.Content})
 	}
 	_, err := q.InsertTodosByCellID(ctx, args)
 	if err != nil {
 		return nil, err
 	}
 
+	cell, err := s.cellService.GetCellWithTodosByID(ctx, cellID)
+
+	if err != nil {
+		return nil, err
+	}
+
+	return cell, err
 }

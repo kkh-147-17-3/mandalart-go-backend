@@ -16,17 +16,17 @@ returning id
 `
 
 type CreateCellParams struct {
-	OwnerID     *int32  `json:"ownerId"`
-	SheetID     *int32  `json:"sheetId"`
+	OwnerID     int     `json:"ownerId"`
+	SheetID     int     `json:"sheetId"`
 	Goal        *string `json:"goal"`
 	Color       *string `json:"color"`
-	Step        int32   `json:"step"`
-	Order       int32   `json:"order"`
-	ParentID    *int32  `json:"parentId"`
+	Step        int     `json:"step"`
+	Order       int     `json:"order"`
+	ParentID    int     `json:"parentId"`
 	IsCompleted bool    `json:"isCompleted"`
 }
 
-func (q *Queries) CreateCell(ctx context.Context, arg CreateCellParams) (int32, error) {
+func (q *Queries) CreateCell(ctx context.Context, arg CreateCellParams) (int, error) {
 	row := q.db.QueryRow(ctx, createCell,
 		arg.OwnerID,
 		arg.SheetID,
@@ -37,7 +37,7 @@ func (q *Queries) CreateCell(ctx context.Context, arg CreateCellParams) (int32, 
 		arg.ParentID,
 		arg.IsCompleted,
 	)
-	var id int32
+	var id int
 	err := row.Scan(&id)
 	return id, err
 }
@@ -49,13 +49,13 @@ RETURNING id
 `
 
 type CreateSheetParams struct {
-	OwnerID *int32  `json:"ownerId"`
+	OwnerID int     `json:"ownerId"`
 	Name    *string `json:"name"`
 }
 
-func (q *Queries) CreateSheet(ctx context.Context, arg CreateSheetParams) (int32, error) {
+func (q *Queries) CreateSheet(ctx context.Context, arg CreateSheetParams) (int, error) {
 	row := q.db.QueryRow(ctx, createSheet, arg.OwnerID, arg.Name)
-	var id int32
+	var id int
 	err := row.Scan(&id)
 	return id, err
 }
@@ -71,9 +71,9 @@ type CreateUserParams struct {
 	SocialProvider *string `json:"socialProvider"`
 }
 
-func (q *Queries) CreateUser(ctx context.Context, arg CreateUserParams) (int32, error) {
+func (q *Queries) CreateUser(ctx context.Context, arg CreateUserParams) (int, error) {
 	row := q.db.QueryRow(ctx, createUser, arg.SocialID, arg.SocialProvider)
-	var id int32
+	var id int
 	err := row.Scan(&id)
 	return id, err
 }
@@ -84,7 +84,7 @@ FROM todos
 WHERE cell_id = $1
 `
 
-func (q *Queries) DeleteTodosByCellID(ctx context.Context, cellID *int32) error {
+func (q *Queries) DeleteTodosByCellID(ctx context.Context, cellID int) error {
 	_, err := q.db.Exec(ctx, deleteTodosByCellID, cellID)
 	return err
 }
@@ -95,7 +95,7 @@ FROM cells
 WHERE id = $1
 `
 
-func (q *Queries) GetCellById(ctx context.Context, id int32) (Cell, error) {
+func (q *Queries) GetCellById(ctx context.Context, id int) (Cell, error) {
 	row := q.db.QueryRow(ctx, getCellById, id)
 	var i Cell
 	err := row.Scan(
@@ -121,7 +121,7 @@ WHERE parent_id = $1
 ORDER BY step
 `
 
-func (q *Queries) GetChildrenCellsByParentId(ctx context.Context, parentID *int32) ([]Cell, error) {
+func (q *Queries) GetChildrenCellsByParentId(ctx context.Context, parentID int) ([]Cell, error) {
 	rows, err := q.db.Query(ctx, getChildrenCellsByParentId, parentID)
 	if err != nil {
 		return nil, err
@@ -161,7 +161,7 @@ ORDER BY id DESC
 LIMIT 1
 `
 
-func (q *Queries) GetLatestSheetByOwnerId(ctx context.Context, ownerID *int32) (Sheet, error) {
+func (q *Queries) GetLatestSheetByOwnerId(ctx context.Context, ownerID int) (Sheet, error) {
 	row := q.db.QueryRow(ctx, getLatestSheetByOwnerId, ownerID)
 	var i Sheet
 	err := row.Scan(
@@ -186,15 +186,15 @@ WHERE sheets.id = (SELECT id
 `
 
 type GetLatestSheetWithMainCellsByOwnerIdRow struct {
-	ID          int32   `json:"id"`
+	ID          int     `json:"id"`
 	Name        *string `json:"name"`
-	CellID      int32   `json:"cellId"`
+	CellID      int     `json:"cellId"`
 	Color       *string `json:"color"`
 	Goal        *string `json:"goal"`
 	IsCompleted bool    `json:"isCompleted"`
 }
 
-func (q *Queries) GetLatestSheetWithMainCellsByOwnerId(ctx context.Context, ownerID *int32) ([]GetLatestSheetWithMainCellsByOwnerIdRow, error) {
+func (q *Queries) GetLatestSheetWithMainCellsByOwnerId(ctx context.Context, ownerID int) ([]GetLatestSheetWithMainCellsByOwnerIdRow, error) {
 	rows, err := q.db.Query(ctx, getLatestSheetWithMainCellsByOwnerId, ownerID)
 	if err != nil {
 		return nil, err
@@ -228,7 +228,7 @@ WHERE sheet_id = $1
   AND step = 1
 `
 
-func (q *Queries) GetMainCellsBySheetId(ctx context.Context, sheetID *int32) ([]Cell, error) {
+func (q *Queries) GetMainCellsBySheetId(ctx context.Context, sheetID int) ([]Cell, error) {
 	rows, err := q.db.Query(ctx, getMainCellsBySheetId, sheetID)
 	if err != nil {
 		return nil, err
@@ -264,7 +264,7 @@ const getTodosByCellID = `-- name: GetTodosByCellID :many
 SELECT id, owner_id, cell_id, content, created_at, modified_at FROM todos WHERE cell_id = $1
 `
 
-func (q *Queries) GetTodosByCellID(ctx context.Context, cellID *int32) ([]Todo, error) {
+func (q *Queries) GetTodosByCellID(ctx context.Context, cellID int) ([]Todo, error) {
 	rows, err := q.db.Query(ctx, getTodosByCellID, cellID)
 	if err != nil {
 		return nil, err
@@ -297,7 +297,7 @@ FROM todos
 WHERE cell_id = $1
 `
 
-func (q *Queries) GetTodosByCellId(ctx context.Context, cellID *int32) ([]Todo, error) {
+func (q *Queries) GetTodosByCellId(ctx context.Context, cellID int) ([]Todo, error) {
 	rows, err := q.db.Query(ctx, getTodosByCellId, cellID)
 	if err != nil {
 		return nil, err
@@ -345,8 +345,8 @@ func (q *Queries) GetUserBySocialProviderInfo(ctx context.Context, arg GetUserBy
 }
 
 type InsertTodosByCellIDParams struct {
-	OwnerID *int32  `json:"ownerId"`
-	CellID  *int32  `json:"cellId"`
+	OwnerID int     `json:"ownerId"`
+	CellID  int     `json:"cellId"`
 	Content *string `json:"content"`
 }
 
@@ -359,7 +359,7 @@ WHERE id = $1
 `
 
 type UpdateCellParams struct {
-	ID          int32   `json:"id"`
+	ID          int     `json:"id"`
 	Goal        *string `json:"goal"`
 	Color       *string `json:"color"`
 	IsCompleted bool    `json:"isCompleted"`

@@ -4,15 +4,16 @@ import (
 	"context"
 	"fmt"
 	"log"
-	repo "mandalart.com/repositories"
-	"mandalart.com/services"
 	"net/http"
 	"os"
+	"strconv"
 	"strings"
+
+	repo "mandalart.com/repositories"
+	"mandalart.com/services"
 
 	"github.com/go-chi/chi/v5"
 	"github.com/go-chi/chi/v5/middleware"
-	"github.com/go-chi/render"
 	"github.com/joho/godotenv"
 	"mandalart.com/utils"
 	"mandalart.com/views"
@@ -31,8 +32,10 @@ func main() {
 	sheetService := services.NewSheetService(queries)
 	cellService := services.NewCellService(queries)
 	authService := services.NewAuthService(queries)
+	todoService := services.NewTodoService(queries, cellService)
 	sheetView := views.NewSheetView(sheetService, cellService)
 	authView := views.NewAuthView(authService)
+	cellView := views.NewCellView(cellService, todoService)
 
 	r.Get("/", authView.LoginPage)
 	r.Get("/oauth/kakao", authView.KakaoLogin)
@@ -40,7 +43,11 @@ func main() {
 		r.Use(middleware.Logger)
 		r.Use(AuthCtx)
 		r.Get("/sheet", sheetView.GetLatestSheetWithMainCells)
-		r.Get("/cell/{cellID}/children", sheetView.GetChildrenCells)
+		r.Route("/cell/{cellID}", func(r chi.Router) {
+			r.Use(CellCtx)
+			r.Patch("/", cellView.UpdateCell)
+			r.Get("/children", sheetView.GetChildrenCells)
+		})
 		r.Post("/sheet", sheetView.CreateSheet)
 	})
 
@@ -50,6 +57,20 @@ func main() {
 	}
 
 	defer utils.DBPool.Close()
+}
+
+func CellCtx(next http.Handler) http.Handler {
+	return http.HandlerFunc(
+		func(w http.ResponseWriter, r *http.Request) {
+			cellID, err := strconv.Atoi(chi.URLParam(r, "cellID"))
+			if err != nil {
+				views.Respond(w,r,http.StatusBadRequest, err)
+			}
+
+			ctx := context.WithValue(r.Context(), "cellID", cellID)
+			next.ServeHTTP(w, r.WithContext(ctx))
+		},
+	)
 }
 
 func AuthCtx(next http.Handler) http.Handler {
@@ -67,8 +88,7 @@ func AuthCtx(next http.Handler) http.Handler {
 		}
 
 		if err != nil {
-			render.Status(r, http.StatusUnauthorized)
-			render.JSON(w, r, err.Error())
+			views.Respond(w,r,http.StatusUnauthorized, err)
 			return
 		}
 

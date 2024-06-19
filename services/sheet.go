@@ -20,14 +20,14 @@ type SheetService struct {
 }
 
 type Cell struct {
-	ID          int32   `json:"id"`
+	ID          int   `json:"id"`
 	Color       *string `json:"color"`
 	Goal        *string `json:"goal"`
 	IsCompleted bool    `json:"isCompleted"`
 }
 
 type SheetWithMain struct {
-	ID    int32   `json:"id"`
+	ID    int   `json:"id"`
 	Name  *string `json:"name"`
 	Cells []Cell  `json:"cells"`
 }
@@ -36,8 +36,8 @@ func NewSheetService(q *repo.Queries) *SheetService {
 	return &SheetService{q}
 }
 
-func (s *SheetService) GetSheetWithMainCellsById(ctx context.Context, ownerID int32) (*SheetWithMain, error) {
-	data, err := s.q.GetLatestSheetWithMainCellsByOwnerId(ctx, &ownerID)
+func (s *SheetService) GetSheetWithMainCellsById(ctx context.Context, ownerID int) (*SheetWithMain, error) {
+	data, err := s.q.GetLatestSheetWithMainCellsByOwnerId(ctx, ownerID)
 	if err != nil {
 		log.Println("Error fetching sheet data:", err)
 		return nil, err
@@ -64,14 +64,14 @@ func (s *SheetService) GetSheetWithMainCellsById(ctx context.Context, ownerID in
 	return sheet, nil
 }
 
-func (s *SheetService) CreateNewSheet(ctx context.Context, ownerID int32) (*SheetWithMain, error) {
+func (s *SheetService) CreateNewSheet(ctx context.Context, ownerID int) (*SheetWithMain, error) {
 	tx, err := utils.DBPool.Begin(ctx)
 	if err != nil {
 		return nil, err
 	}
 
 	sheetID, err := s.q.WithTx(tx).CreateSheet(ctx, repo.CreateSheetParams{
-		OwnerID: &ownerID,
+		OwnerID: ownerID,
 	})
 	if err != nil {
 		tx.Rollback(ctx)
@@ -79,8 +79,8 @@ func (s *SheetService) CreateNewSheet(ctx context.Context, ownerID int32) (*Shee
 	}
 
 	parentCellID, err := s.q.WithTx(tx).CreateCell(ctx, repo.CreateCellParams{
-		OwnerID:     &ownerID,
-		SheetID:     &sheetID,
+		OwnerID:     ownerID,
+		SheetID:     sheetID,
 		Step:        1,
 		Order:       0,
 		IsCompleted: false,
@@ -90,14 +90,14 @@ func (s *SheetService) CreateNewSheet(ctx context.Context, ownerID int32) (*Shee
 		return nil, err
 	}
 
-	parentCellIDs := make([]int32, CellNums)
+	parentCellIDs := make([]int, CellNums)
 	for i := 0; i < CellNums; i++ {
 		cellID, err := s.q.WithTx(tx).CreateCell(ctx, repo.CreateCellParams{
-			OwnerID:     &ownerID,
-			SheetID:     &sheetID,
+			OwnerID:     ownerID,
+			SheetID:     sheetID,
 			Step:        2,
-			Order:       int32(i),
-			ParentID:    &parentCellID,
+			Order:       i,
+			ParentID:    parentCellID,
 			IsCompleted: false,
 		})
 		if err != nil {
@@ -109,11 +109,11 @@ func (s *SheetService) CreateNewSheet(ctx context.Context, ownerID int32) (*Shee
 	for i := 0; i < CellNums; i++ {
 		for j := i + 1; j < CellNums; j++ {
 			if _, err := s.q.WithTx(tx).CreateCell(ctx, repo.CreateCellParams{
-				OwnerID:     &ownerID,
-				SheetID:     &sheetID,
+				OwnerID:     ownerID,
+				SheetID:     sheetID,
 				Step:        3,
-				Order:       int32(j),
-				ParentID:    &parentCellIDs[i],
+				Order:       j,
+				ParentID:    parentCellIDs[i],
 				IsCompleted: false,
 			}); err != nil {
 				return nil, err

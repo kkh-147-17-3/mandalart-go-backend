@@ -5,42 +5,42 @@
 package repositories
 
 import (
-	"mandalart.com/types"
+	"github.com/jackc/pgx/v5/pgtype"
 )
 
 type Cell struct {
-	ID          int32           `json:"id"`
-	SheetID     *int32          `json:"sheetId"`
-	Goal        *string         `json:"goal"`
-	Color       *string         `json:"color"`
-	Step        int32           `json:"step"`
-	Order       int32           `json:"order"`
-	ParentID    *int32          `json:"parentId"`
-	IsCompleted bool            `json:"isCompleted"`
-	CreatedAt   types.Timestamp `json:"createdAt"`
-	ModifiedAt  types.Timestamp `json:"modifiedAt"`
-	OwnerID     *int32          `json:"ownerId"`
+	ID          int              `json:"id"`
+	SheetID     int              `json:"sheetId"`
+	Goal        *string          `json:"goal"`
+	Color       *string          `json:"color"`
+	Step        int              `json:"step"`
+	Order       int              `json:"order"`
+	ParentID    int              `json:"parentId"`
+	IsCompleted bool             `json:"isCompleted"`
+	CreatedAt   pgtype.Timestamp `json:"createdAt"`
+	ModifiedAt  pgtype.Timestamp `json:"modifiedAt"`
+	OwnerID     int              `json:"ownerId"`
 }
 
 type Sheet struct {
-	ID         int32           `json:"id"`
-	OwnerID    *int32          `json:"ownerId"`
-	Name       *string         `json:"name"`
-	CreatedAt  types.Timestamp `json:"createdAt"`
-	ModifiedAt types.Timestamp `json:"modifiedAt"`
+	ID         int              `json:"id"`
+	OwnerID    int              `json:"ownerId"`
+	Name       *string          `json:"name"`
+	CreatedAt  pgtype.Timestamp `json:"createdAt"`
+	ModifiedAt pgtype.Timestamp `json:"modifiedAt"`
 }
 
 type Todo struct {
-	ID         int32           `json:"id"`
-	OwnerID    *int32          `json:"ownerId"`
-	CellID     *int32          `json:"cellId"`
-	Content    *string         `json:"content"`
-	CreatedAt  types.Timestamp `json:"createdAt"`
-	ModifiedAt types.Timestamp `json:"modifiedAt"`
+	ID         int              `json:"id"`
+	OwnerID    int              `json:"ownerId"`
+	CellID     int              `json:"cellId"`
+	Content    *string          `json:"content"`
+	CreatedAt  pgtype.Timestamp `json:"createdAt"`
+	ModifiedAt pgtype.Timestamp `json:"modifiedAt"`
 }
 
 type User struct {
-	ID             int32   `json:"id"`
+	ID             int     `json:"id"`
 	SocialID       *string `json:"socialId"`
 	SocialProvider *string `json:"socialProvider"`
 }

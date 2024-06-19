@@ -3,9 +3,6 @@ package views
 import (
 	"fmt"
 	"net/http"
-	"strconv"
-
-	"github.com/go-chi/chi/v5"
 	s "mandalart.com/services"
 )
 
@@ -22,17 +19,17 @@ func (v *SheetView) GetLatestSheetWithMainCells(w http.ResponseWriter, r *http.R
 	ctx := r.Context()
 	userID, ok := ctx.Value("userID").(int)
 	if !ok {
-		respond(w, r, http.StatusInternalServerError, fmt.Errorf("user id not found"))
+		Respond(w, r, http.StatusInternalServerError, fmt.Errorf("user id not found"))
 		return
 	}
 
-	sheet, err := v.sheetService.GetSheetWithMainCellsById(ctx, int32(userID))
+	sheet, err := v.sheetService.GetSheetWithMainCellsById(ctx, userID)
 	if err != nil {
-		respond(w, r, http.StatusInternalServerError, err.Error())
+		Respond(w, r, http.StatusInternalServerError, err.Error())
 		return
 	}
 
-	respond(w, r, http.StatusOK, sheet)
+	Respond(w, r, http.StatusOK, sheet)
 }
 
 func (v *SheetView) GetChildrenCells(w http.ResponseWriter, r *http.Request) {
@@ -40,35 +37,35 @@ func (v *SheetView) GetChildrenCells(w http.ResponseWriter, r *http.Request) {
 	userID, ok := ctx.Value("userID").(int)
 
 	if !ok {
-		respond(w, r, http.StatusInternalServerError, fmt.Errorf("user id not found"))
+		Respond(w, r, http.StatusInternalServerError, fmt.Errorf("user id not found"))
 		return
 	}
 
-	cellID, err := strconv.Atoi(chi.URLParam(r, "cellID"))
+	cellID, ok := ctx.Value("cellID").(int)
+	if !ok {
+		Respond(w, r, http.StatusBadRequest, fmt.Errorf("cell id not found"))
+	}
+
+
+	cells, err := v.cellService.GetChildrenCellsByParentID(ctx, userID, cellID)
 	if err != nil {
-		respond(w, r, http.StatusBadRequest, err.Error())
+		Respond(w, r, http.StatusInternalServerError, err.Error())
 		return
 	}
 
-	cells, err := v.cellService.GetChildrenCellsByParentID(ctx, int32(userID), int32(cellID))
-	if err != nil {
-		respond(w, r, http.StatusInternalServerError, err.Error())
-		return
-	}
-
-	respond(w, r, http.StatusOK, cells)
+	Respond(w, r, http.StatusOK, cells)
 }
 
 func (v *SheetView) CreateSheet(w http.ResponseWriter, r *http.Request) {
 	ctx := r.Context()
 	userID, ok := ctx.Value("userID").(int)
 	if !ok {
-		respond(w, r, http.StatusUnauthorized, fmt.Errorf("user id not found"))
+		Respond(w, r, http.StatusUnauthorized, fmt.Errorf("user id not found"))
 	}
 
-	sheet, err := v.sheetService.CreateNewSheet(ctx, int32(userID))
+	sheet, err := v.sheetService.CreateNewSheet(ctx, userID)
 	if err != nil {
-		respond(w, r, http.StatusInternalServerError, err.Error())
+		Respond(w, r, http.StatusInternalServerError, err.Error())
 	}
-	respond(w, r, http.StatusOK, sheet)
+	Respond(w, r, http.StatusOK, sheet)
 }

@@ -13,25 +13,25 @@ type CellWithTodos struct {
 }
 
 type CellService struct {
-	q *repo.Queries
+	q repo.Querier
 }
 
-func NewCellService(q *repo.Queries) *CellService {
+func NewCellService(q repo.Querier) *CellService {
 	return &CellService{q}
 }
 
-func (c *CellService) GetChildrenCellsByParentID(ctx context.Context, userID int32, parentID int32) ([]Cell, error) {
+func (c *CellService) GetChildrenCellsByParentID(ctx context.Context, userID int, parentID int) ([]Cell, error) {
 
 	parentCell, err := c.q.GetCellById(ctx, parentID)
 	if err != nil {
 		return nil, err
 	}
 
-	if *parentCell.OwnerID != userID {
+	if parentCell.OwnerID != userID {
 		return nil, fmt.Errorf("not authorized")
 	}
 
-	children, err := c.q.GetChildrenCellsByParentId(ctx, &parentID)
+	children, err := c.q.GetChildrenCellsByParentId(ctx, parentID)
 	if err != nil {
 		return nil, err
 	}
@@ -50,14 +50,14 @@ func (c *CellService) GetChildrenCellsByParentID(ctx context.Context, userID int
 	return cells, nil
 }
 
-func (c *CellService) GetCellWithTodosByID(ctx context.Context, cellID int32) (*CellWithTodos, error) {
+func (c *CellService) GetCellWithTodosByID(ctx context.Context, cellID int) (*CellWithTodos, error) {
 	q := repo.New(utils.DBPool)
 	result, err := q.GetCellById(ctx, cellID)
 	if err != nil {
 		return nil, err
 	}
 
-	todos, err := q.GetTodosByCellID(ctx, &result.ID)
+	todos, err := q.GetTodosByCellID(ctx, result.ID)
 	if err != nil {
 		return nil, err
 	}
